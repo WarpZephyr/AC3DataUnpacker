@@ -54,6 +54,7 @@
                 // Store offsets and lengths as lists so we only iterate as many times as there are valid entries when extracting
                 List<int> offsets = new List<int>(8192);
                 List<int> lengths = new List<int>(8192);
+                List<int> ids = new List<int>(8192);
 
                 // Get offsets and lengths
                 for (int i = 0; i < 8192; i++)
@@ -66,9 +67,13 @@
                     int start_block = BitConverter.ToInt32(buffer, 0);
                     int block_count = BitConverter.ToInt32(buffer, 4);
 
-                    // Get direct offset and length for easy use later
-                    offsets.Add((start_block * ALIGNMENT) + BASE_ADDRESS);
-                    lengths.Add(block_count * ALIGNMENT);
+                    if (start_block != 0 || block_count != 0)
+                    {
+                        // Get direct offset and length for easy use later
+                        offsets.Add((start_block * ALIGNMENT) + BASE_ADDRESS);
+                        lengths.Add(block_count * ALIGNMENT);
+                        ids.Add(i);
+                    }
                 }
 
                 // Start extracting files
@@ -80,7 +85,7 @@
                     fs.Read(data, 0, lengths[i]);
 
                     // Write the data buffer
-                    File.WriteAllBytes(Path.Combine(outDir, $"{i}"), data);
+                    File.WriteAllBytes(Path.Combine(outDir, $"{ids[i]}"), data);
                 }
             }
         }
