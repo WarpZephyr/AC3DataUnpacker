@@ -1,5 +1,9 @@
 # AC3DataUnpacker
 Unpacks and repacks the AC3DATA.BIN archive in Armored Core 3.  
+When repacking all files to repack must be in the root folder you provide.  
+Deeper folders will not be accessed.  
+
+File names must be IDs between 0 and 8192, extensions can still be added.  
 
 # Technical Notes
 The archive has a file entry table with a set size of 8192 entries.  

@@ -155,8 +155,6 @@
                     long id_jump = id * 8;
                     if (fs.Position != id_jump && id_jump > 0)
                     {
-                        Console.WriteLine(id_jump);
-                        Console.WriteLine(fs.Position);
                         fs.Write(new byte[id_jump - fs.Position]);
                     }
 
