@@ -9,28 +9,34 @@
         {
             if (args.Length == 0)
             {
+                Console.WriteLine("This program does not have a UI, drag and drop the archive on the program.");
+                Console.WriteLine("Press any key to close.");
+                Console.ReadLine();
                 return;
             }
 
-            foreach (string arg in args)
+            try
             {
-                if (File.Exists(arg))
+                foreach (string arg in args)
                 {
-                    Unpack(arg);
-                }
-                else if (Directory.Exists(arg))
-                {
-                    try
+                    if (File.Exists(arg))
+                    {
+                        Unpack(arg);
+                    }
+                    else if (Directory.Exists(arg))
                     {
                         Repack(arg);
                     }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        Console.WriteLine(ex.StackTrace);
-                        Console.ReadLine();
-                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                Console.WriteLine();
+                Console.WriteLine("An error has occurred.");
+                Console.WriteLine("Press any key to close.");
+                Console.ReadLine();
             }
         }
 
@@ -96,9 +102,9 @@
             using (var fs = new FileStream(outPath, FileMode.Create)) 
             {
                 // Get all file paths
-                var paths = Directory.EnumerateFiles(path);
+                var paths = Directory.EnumerateFiles(path, "*", SearchOption.TopDirectoryOnly).OrderBy(f => int.Parse(Path.GetFileNameWithoutExtension(f)));
 
-                // Reserve header
+                // Reserve the header to be filled later
                 fs.Write(new byte[65536], 0, 65536);
                 fs.Position = 0;
 
@@ -107,7 +113,14 @@
                 foreach (string fpath in paths)
                 {
                     byte[] data = File.ReadAllBytes(fpath); // Read file to repack
-                    int block_length = data.Length; // Store block length we can correct
+                    string filename = Path.GetFileNameWithoutExtension(fpath);
+                    int id = int.Parse(filename);
+                    if (id > 8192)
+                    {
+                        throw new Exception("The file ID must not be more than 8192.");
+                    }
+
+                    int block_length = data.Length; // Store block length we can correct it later
 
                     // See if alignment matches, if not add it to block_length
                     int remainder = block_length % ALIGNMENT;
@@ -137,6 +150,15 @@
                     fieldbuffer[2] = (byte)((start_block >> 16) & 0xff);
                     fieldbuffer[1] = (byte)((start_block >> 8) & 0xff);
                     fieldbuffer[0] = (byte)(start_block & 0xff);
+
+                    // Pad the entry to store it at the same index as its id.
+                    long id_jump = id * 8;
+                    if (fs.Position != id_jump && id_jump > 0)
+                    {
+                        Console.WriteLine(id_jump);
+                        Console.WriteLine(fs.Position);
+                        fs.Write(new byte[id_jump - fs.Position]);
+                    }
 
                     // Write the field buffer
                     fs.Write(fieldbuffer, 0, 8);
