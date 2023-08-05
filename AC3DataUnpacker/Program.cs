@@ -107,7 +107,7 @@
             using (var fs = new FileStream(outPath, FileMode.Create)) 
             {
                 // Get all file paths
-                var paths = Directory.EnumerateFiles(path, "*", SearchOption.TopDirectoryOnly).OrderBy(f => int.Parse(Path.GetFileNameWithoutExtension(f)));
+                var paths = Directory.EnumerateFiles(path, "*", SearchOption.TopDirectoryOnly).OrderBy(f => GetID(f));
 
                 // Reserve the header to be filled later
                 fs.Write(new byte[65536], 0, 65536);
@@ -118,11 +118,15 @@
                 foreach (string fpath in paths)
                 {
                     byte[] data = File.ReadAllBytes(fpath); // Read file to repack
-                    string filename = Path.GetFileNameWithoutExtension(fpath);
-                    int id = int.Parse(filename);
-                    if (id > 8192)
+                    int id = GetID(fpath);
+
+                    if (id < 0)
                     {
-                        throw new Exception("The file ID must not be more than 8192.");
+                        throw new Exception("The file ID must not be less than 0.");
+                    }
+                    if (id > 8191)
+                    {
+                        throw new Exception("The file ID must not be more than 8191.");
                     }
 
                     int block_length = data.Length; // Store block length we can correct it later
@@ -184,6 +188,20 @@
                     fs.Seek(field_pos, SeekOrigin.Begin); // Seek back to the fields
                 }
             }
+        }
+
+        static int GetID(string path)
+        {
+            if (path.Contains("."))
+            {
+                path = path.Remove(path.IndexOf('.'));
+            }
+
+            if (!int.TryParse(Path.GetFileNameWithoutExtension(path), out int id))
+            {
+                throw new Exception($"The file \"{Path.GetFileName(path)}\" could not have its name parsed as an ID.");
+            }
+            return id;
         }
     }
 }
