@@ -105,13 +105,13 @@
 
             // Get out path
             string? dir = Path.GetDirectoryName(path) ?? throw new Exception("Could not get directory name of path.");
-            if (dir.Contains("AC2DATA"))
+            string name = Path.GetFileName(path);
+            if (name.Contains("AC2DATA"))
             {
                 baseAddress = 0x8000;
                 entryCount = 4096;
             }
 
-            string name = Path.GetFileName(path);
             string extension = ".BIN";
             int extensionIndex = name.LastIndexOf("-");
             if (extensionIndex != -1)
