@@ -1,22 +1,31 @@
 # AC3DataUnpacker
-Unpacks and repacks the AC3DATA.BIN archive in Armored Core 3.  
-When repacking all files to repack must be in the root folder you provide.  
+Unpacks and repacks:  
+AC2DATA.BIN in Armored Core 2.  
+AC25DATA.BIN in Armored Core 2 Another Age.  
+AC3DATA.BIN in Armored Core 3.  
+
+When repacking, all files to repack must be in the root folder you provide.  
 Deeper folders will not be accessed.  
 
-File names must be IDs between 0 and 8191, extensions can still be added.  
+File names must be IDs between 0 and 4095 for AC2DATA.BIN.  
+File names must be IDs between 0 and 8191 for AC25DATA.BIN or AC3DATA.BIN.  
+If the name of the folder provided contains "AC2DATA" it will be treated as AC2DATA which only supports 4096 files instead of 8192.  
+Extensions can be added to files as extensions will be removed when repacking.  
+
+AC25DATA repacking had a different amount of padding. I'm not sure why. It may not work when repacked.
 
 # Technical Notes
-The archive has a file entry table with a set size of 8192 entries.  
-Since this is from a PS2 game the entries are in Little Endian.  
-The entries are two 32-bit integers, start block and block count.  
-The alignment used for the blocks is 0x800.  
-Entries base start block starting from 0x10000, so 0 starts at that address.  
-The block count is the number of 0x800 blocks an entry covers.  
+The AC DATA archive format is simplistic.  
+It is in Little Endian since it is used in PS2 games.  
+The entries are two 32-bit integers each, with a start block and block count.  
+The start block counts up beginning from the base address after all the entries.  
+The alignment used for the blocks is 0x800. Each block is 0x800 in size.  
 
-There seems to be empty entries inbetween normal ones, I am not sure why.  
-If a block count is not divisible by 16, extra 0x800 padding blocks are added to ensure data is padded as if it were.  
-These extra padding blocks are not factored in the block count of an entry.  
+The index an entry is at is it's file ID.  
+There will be empty entries with 0 set for the start block and block count.  
 
-There is no file names as far as I can tell.  
-They appear to go by ID, which is determined by index.  
-If an index does not exist as an ID it is written null as a dummy.
+In AC2DATA 4096 entries are always present with a base address of 0x8000.  
+In AC25DATA and AC3DATA 8192 entries are always present with a base address of 0x10000.  
+
+For some reason the amount of padding between the files pads to a 0x8000 block usually.  
+This may not be correct though, as for some reason a block padded to 0x458000 in the original file instead of 0x450000 in AC25DATA.

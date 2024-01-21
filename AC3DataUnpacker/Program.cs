@@ -168,13 +168,6 @@
                     int start_block = ((int)data_pos - baseAddress) / ALIGNMENT;
                     int block_count = block_length / ALIGNMENT;
 
-                    // Ensure blocks pad out to a number divisible by 16 (we do not add this to block count)
-                    int pad_blocks = 0;
-                    if (block_count % 16 != 0)
-                    {
-                        pad_blocks = 16 - block_count % 16;
-                    }
-
                     // Get a byte array containing start_block and block_count in little endian
                     byte[] fieldbuffer = new byte[8];
                     fieldbuffer[7] = (byte)((block_count >> 24) & 0xff);
@@ -207,9 +200,10 @@
                         fs.Write(new byte[block_length - data.Length]);
                     }
 
-                    if (pad_blocks != 0)
+                    // Pad to a 0x8000 block.
+                    if (fs.Position % 0x8000 != 0)
                     {
-                        fs.Write(new byte[pad_blocks * ALIGNMENT]);
+                        fs.Write(new byte[0x8000 - (fs.Position % 0x8000)]);
                     }
 
                     data_pos = fs.Position; // Set data position we will return to when next writing for an easy next start block
