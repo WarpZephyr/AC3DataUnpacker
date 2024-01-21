@@ -3,7 +3,6 @@
     internal class Program
     {
         static int ALIGNMENT = 0x800;
-        static int BASE_ADDRESS = 0x10000;
 
         static void Main(string[] args)
         {
@@ -42,9 +41,18 @@
 
         static void Unpack(string path)
         {
+            int baseAddress = 0x10000;
+            int entryCount = 8192;
+
             // Get out directory
             string? dir = Path.GetDirectoryName(path) ?? throw new Exception("Could not get directory name of path.");
             string name = Path.GetFileNameWithoutExtension(path);
+            if (name.Contains("AC2DATA"))
+            {
+                baseAddress = 0x8000;
+                entryCount = 4096;
+            }
+
             string extension = Path.GetExtension(path).Substring(1);
             string outDir = Path.Combine(dir, $"{name}-{extension}");
             Directory.CreateDirectory(outDir);
@@ -52,12 +60,12 @@
             using (var fs = new FileStream(path, FileMode.Open))
             {
                 // Store offsets and lengths as lists so we only iterate as many times as there are valid entries when extracting
-                List<int> offsets = new List<int>(8192);
-                List<int> lengths = new List<int>(8192);
-                List<int> ids = new List<int>(8192);
+                List<int> offsets = new List<int>(entryCount);
+                List<int> lengths = new List<int>(entryCount);
+                List<int> ids = new List<int>(entryCount);
 
                 // Get offsets and lengths
-                for (int i = 0; i < 8192; i++)
+                for (int i = 0; i < entryCount; i++)
                 {
                     // Create a single byte array instead of two for each
                     byte[] buffer = new byte[8];
@@ -70,7 +78,7 @@
                     if (start_block != 0 || block_count != 0)
                     {
                         // Get direct offset and length for easy use later
-                        offsets.Add((start_block * ALIGNMENT) + BASE_ADDRESS);
+                        offsets.Add((start_block * ALIGNMENT) + baseAddress);
                         lengths.Add(block_count * ALIGNMENT);
                         ids.Add(i);
                     }
@@ -92,8 +100,17 @@
 
         static void Repack(string path)
         {
+            int baseAddress = 0x10000;
+            int entryCount = 8192;
+
             // Get out path
             string? dir = Path.GetDirectoryName(path) ?? throw new Exception("Could not get directory name of path.");
+            if (dir.Contains("AC2DATA"))
+            {
+                baseAddress = 0x8000;
+                entryCount = 4096;
+            }
+
             string name = Path.GetFileName(path);
             string extension = ".BIN";
             int extensionIndex = name.LastIndexOf("-");
@@ -110,13 +127,21 @@
                 var paths = Directory.EnumerateFiles(path, "*", SearchOption.TopDirectoryOnly).OrderBy(f => GetID(f));
 
                 // Reserve the header to be filled later
-                fs.Write(new byte[65536], 0, 65536);
+                int headerSize = entryCount * 2;
+                fs.Write(new byte[headerSize], 0, headerSize);
                 fs.Position = 0;
 
                 // Store the last position for easily getting the next start block
-                long data_pos = BASE_ADDRESS;
+                int fileCount = 0;
+                long data_pos = baseAddress;
                 foreach (string fpath in paths)
                 {
+                    fileCount += 1;
+                    if (fileCount > entryCount)
+                    {
+                        throw new Exception($"File count provided in folder exceeded max entry count of {entryCount}.");
+                    }
+
                     byte[] data = File.ReadAllBytes(fpath); // Read file to repack
                     int id = GetID(fpath);
 
@@ -124,9 +149,10 @@
                     {
                         throw new Exception("The file ID must not be less than 0.");
                     }
-                    if (id > 8191)
+
+                    if (id > entryCount - 1)
                     {
-                        throw new Exception("The file ID must not be more than 8191.");
+                        throw new Exception($"The file ID must not be more than {entryCount - 1}.");
                     }
 
                     int block_length = data.Length; // Store block length we can correct it later
@@ -139,7 +165,7 @@
                     }
 
                     // Store start block relative to base address
-                    int start_block = ((int)data_pos - BASE_ADDRESS) / ALIGNMENT;
+                    int start_block = ((int)data_pos - baseAddress) / ALIGNMENT;
                     int block_count = block_length / ALIGNMENT;
 
                     // Ensure blocks pad out to a number divisible by 16 (we do not add this to block count)
@@ -180,10 +206,12 @@
                     {
                         fs.Write(new byte[block_length - data.Length]);
                     }
+
                     if (pad_blocks != 0)
                     {
                         fs.Write(new byte[pad_blocks * ALIGNMENT]);
                     }
+
                     data_pos = fs.Position; // Set data position we will return to when next writing for an easy next start block
                     fs.Seek(field_pos, SeekOrigin.Begin); // Seek back to the fields
                 }
@@ -192,15 +220,16 @@
 
         static int GetID(string path)
         {
-            if (path.Contains("."))
+            while (path.Contains('.'))
             {
-                path = path.Remove(path.IndexOf('.'));
+                path = Path.GetFileNameWithoutExtension(path);
             }
 
             if (!int.TryParse(Path.GetFileNameWithoutExtension(path), out int id))
             {
                 throw new Exception($"The file \"{Path.GetFileName(path)}\" could not have its name parsed as an ID.");
             }
+
             return id;
         }
     }
