@@ -1,4 +1,6 @@
 # AC3DataUnpacker
+This project has been superseded by [FSDATAUnpacker][0].
+
 Unpacks and repacks:  
 AC2DATA.BIN in Armored Core 2.  
 AC25DATA.BIN in Armored Core 2 Another Age.  
@@ -29,3 +31,5 @@ In AC25DATA and AC3DATA 8192 entries are always present with a base address of 0
 
 For some reason the amount of padding between the files pads to a 0x8000 block usually.  
 This may not be correct though, as for some reason a block padded to 0x458000 in the original file instead of 0x450000 in AC25DATA.
+
+[0]: https://github.com/WarpZephyr/FSDATAUnpacker
